@@ -37,6 +37,9 @@ st.title("ML Classification App")
 # Upload data
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
 
+# Initialize model variables as None
+model_lr = model_knn = model_svm = model_dt = None
+
 if uploaded_file:
     # Load and display the dataset
     df = load_data(uploaded_file)
@@ -99,22 +102,22 @@ if uploaded_file:
                     new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
                     
                     # Logistic Regression Prediction
-                    if model_lr:
+                    if model_lr is not None:
                         new_pred_lr = model_lr.predict(new_data_scaled)
                         st.write(f"Logistic Regression Predicted class: {label_encoder.inverse_transform(new_pred_lr)[0]}")
                     
                     # KNN Prediction
-                    if model_knn:
+                    if model_knn is not None:
                         new_pred_knn = model_knn.predict(new_data_scaled)
                         st.write(f"KNN Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
                     
                     # SVM Prediction
-                    if model_svm:
+                    if model_svm is not None:
                         new_pred_svm = model_svm.predict(new_data_scaled)
                         st.write(f"SVM Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
                     
                     # Decision Tree Prediction
-                    if model_dt:
+                    if model_dt is not None:
                         new_pred_dt = model_dt.predict(new_data_scaled)
                         st.write(f"Decision Tree Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
                 else:
