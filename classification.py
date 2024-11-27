@@ -8,8 +8,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
-from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
+from sklearn.tree import plot_tree
 import os
 
 # Cache the file loading to avoid re-reading the file each time the user interacts with the UI
@@ -189,4 +188,25 @@ if uploaded_file:
             
             dt_model = DecisionTreeClassifier(random_state=42)
             dt_model.fit(X_train, y_train)
-            y_pred_dt =
+            y_pred_dt = dt_model.predict(X_test)
+            dt_accuracy = accuracy_score(y_test, y_pred_dt)
+            st.write(f"Decision Tree Test Accuracy: {dt_accuracy * 100:.2f}%")
+
+            fig_dt, ax_dt = plt.subplots(figsize=(15, 10))
+            plot_tree(dt_model, filled=True, feature_names=feature_columns, class_names=label_encoder.classes_, ax=ax_dt)
+            plt.title("Decision Tree Classifier", fontsize=20)
+            st.pyplot(fig_dt, dpi=dpi_value)
+
+            # Make new predictions
+            new_data_dt = st.text_input("Enter new data point for Decision Tree Prediction (comma separated values)")
+            if new_data_dt:
+                new_data_dt = np.array([list(map(float, new_data_dt.split(',')))])
+                new_pred_dt = dt_model.predict(new_data_dt)
+                st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
+
+                # Visualizing new data point on the Decision Tree plot
+                fig_dt_with_new = fig_dt
+                ax_dt = fig_dt_with_new.gca()
+                ax_dt.scatter(new_data_dt[0][0], new_data_dt[0][1], c='red', label="New Prediction", marker='x')
+                ax_dt.legend()
+                st.pyplot(fig_dt_with_new)
