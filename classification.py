@@ -18,6 +18,8 @@ if "label_encoder" not in st.session_state:
     st.session_state.label_encoder = None
 if "feature_columns" not in st.session_state:
     st.session_state.feature_columns = None
+if "accuracies" not in st.session_state:
+    st.session_state.accuracies = {}
 
 # Function to load data
 def load_data(file):
@@ -75,6 +77,7 @@ if uploaded_file:
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"Logistic Regression Accuracy: {accuracy * 100:.2f}%")
                 st.session_state.models["Logistic Regression"] = model_lr
+                st.session_state.accuracies["Logistic Regression"] = accuracy * 100
 
             # KNN
             if st.button("Train KNN"):
@@ -84,6 +87,7 @@ if uploaded_file:
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"KNN Accuracy: {accuracy * 100:.2f}%")
                 st.session_state.models["KNN"] = model_knn
+                st.session_state.accuracies["KNN"] = accuracy * 100
 
             # SVM
             if st.button("Train SVM"):
@@ -93,6 +97,7 @@ if uploaded_file:
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"SVM Accuracy: {accuracy * 100:.2f}%")
                 st.session_state.models["SVM"] = model_svm
+                st.session_state.accuracies["SVM"] = accuracy * 100
 
             # Decision Tree
             if st.button("Train Decision Tree"):
@@ -102,6 +107,13 @@ if uploaded_file:
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"Decision Tree Accuracy: {accuracy * 100:.2f}%")
                 st.session_state.models["Decision Tree"] = model_dt
+                st.session_state.accuracies["Decision Tree"] = accuracy * 100
+
+            # Display all accuracy scores
+            if st.session_state.accuracies:
+                st.write("### Model Accuracies")
+                for model_name, accuracy in st.session_state.accuracies.items():
+                    st.write(f"{model_name}: {accuracy:.2f}%")
 
             # Predicting new data
             st.write("### Predict with New Data")
