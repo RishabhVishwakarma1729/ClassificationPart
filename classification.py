@@ -41,6 +41,7 @@ def train_model(model, X_train, y_train, X_test, y_test, model_name):
     y_pred = model.predict(X_test)
     accuracy = accuracy_score(y_test, y_pred)
     st.write(f"{model_name} Test Accuracy: {accuracy * 100:.2f}%")
+    return model  # Return the trained model
 
 # Streamlit App
 st.title("ML Classification App")
@@ -85,7 +86,7 @@ if uploaded_file:
                         model.set_params(kernel=kernel_type)
 
                     # Train and evaluate model
-                    train_model(model, X_train, y_train, X_test, y_test, model_name)
+                    model = train_model(model, X_train, y_train, X_test, y_test, model_name)
 
             # New data prediction (column-wise input)
             new_data = {}
@@ -98,10 +99,18 @@ if uploaded_file:
                     new_data_values = np.array(list(new_data.values())).reshape(1, -1)
                     new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
 
-                    # Prediction with all models
-                    for model_name, model in model_mapping.items():
-                        if model is not None:
-                            new_pred = model.predict(new_data_scaled)
-                            st.write(f"{model_name} Predicted class: {label_encoder.inverse_transform(new_pred)[0]}")
+                    # Prediction with all models, only if they have been trained
+                    if model_lr is not None:
+                        new_pred_lr = model_lr.predict(new_data_scaled)
+                        st.write(f"Logistic Regression Predicted class: {label_encoder.inverse_transform(new_pred_lr)[0]}")
+                    if model_knn is not None:
+                        new_pred_knn = model_knn.predict(new_data_scaled)
+                        st.write(f"KNN Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
+                    if model_svm is not None:
+                        new_pred_svm = model_svm.predict(new_data_scaled)
+                        st.write(f"SVM Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
+                    if model_dt is not None:
+                        new_pred_dt = model_dt.predict(new_data_scaled)
+                        st.write(f"Decision Tree Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
                 else:
                     st.warning("Please enter valid values for all features before predicting.")
