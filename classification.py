@@ -6,54 +6,40 @@ from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.preprocessing import LabelEncoder, StandardScaler, MinMaxScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
+from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.metrics import accuracy_score
-from sklearn.tree import plot_tree
 import os
 
-# Cache the file loading to avoid re-reading the file each time the user interacts with the UI
+# Cache file loading to avoid re-reading
 @st.cache_data
 def load_data(file):
     if file.name.endswith(".csv"):
         return pd.read_csv(file)
     elif file.name.endswith(".xlsx"):
         return pd.read_excel(file)
-    else:
-        return None
+    return None
 
-# Function to save plots
-def save_plot(fig, filename):
-    plot_path = os.path.join("plots", filename)
-    if not os.path.exists("plots"):
-        os.makedirs("plots")
-    fig.savefig(plot_path, format='jpg')
-    st.download_button(label="Download Plot", data=open(plot_path, 'rb'), file_name=filename, mime='image/jpeg')
-
-# Function to encode target labels and return encoding mapping
+# Function to encode target labels
 def encode_labels(y):
     label_encoder = LabelEncoder()
-    y_encoded = label_encoder.fit_transform(y)
-    return label_encoder, y_encoded
+    return label_encoder.fit_transform(y), label_encoder
 
-# Data preprocessing
+# Function to preprocess the data
 def preprocess_data(df, target_column, feature_columns, scaler_option):
     X = df[feature_columns]
     y = df[target_column]
+    y_encoded, label_encoder = encode_labels(y)
     
-    # Label Encoding for categorical target
-    label_encoder, y_encoded = encode_labels(y)
-    
-    # Scaling the features
     scaler = StandardScaler() if scaler_option == "Standard Scaler" else MinMaxScaler()
     X_scaled = scaler.fit_transform(X)
     
     return X_scaled, y_encoded, label_encoder
 
-# Train-Test split function
+# Train-test split
 def split_data(X_scaled, y_encoded):
     return train_test_split(X_scaled, y_encoded, test_size=0.2, random_state=42)
 
-# Plotting KNN Accuracy Curve
+# Function to plot KNN accuracy curve
 def plot_knn_accuracy_curve(X_train, y_train, metric, k_range):
     knn_accuracy = []
     best_k = 1
@@ -74,18 +60,26 @@ def plot_knn_accuracy_curve(X_train, y_train, metric, k_range):
     ax.set_title(f"KNN Accuracy for Different k Values ({metric} Metric)")
     return fig, best_k, best_score
 
-# 3D SVM Visualization
+# Function for 3D SVM Visualization
 def plot_svm_3d(X_train, y_train, kernel_type, feature_columns):
-    fig_svm_3d = plt.figure()
-    ax_svm_3d = fig_svm_3d.add_subplot(111, projection='3d')
-    ax_svm_3d.scatter(X_train[:, 0], X_train[:, 1], X_train[:, 2], c=y_train, cmap='viridis', s=30)
-    ax_svm_3d.set_xlabel(feature_columns[0])
-    ax_svm_3d.set_ylabel(feature_columns[1])
-    ax_svm_3d.set_zlabel(feature_columns[2])
-    ax_svm_3d.set_title(f"SVM Decision Boundary with {kernel_type} kernel")
-    return fig_svm_3d
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    ax.scatter(X_train[:, 0], X_train[:, 1], X_train[:, 2], c=y_train, cmap='viridis', s=30)
+    ax.set_xlabel(feature_columns[0])
+    ax.set_ylabel(feature_columns[1])
+    ax.set_zlabel(feature_columns[2])
+    ax.set_title(f"SVM Decision Boundary with {kernel_type} kernel")
+    return fig
 
-# Main App
+# Save plot to file
+def save_plot(fig, filename):
+    plot_path = os.path.join("plots", filename)
+    if not os.path.exists("plots"):
+        os.makedirs("plots")
+    fig.savefig(plot_path, format='jpg')
+    return plot_path
+
+# Main Streamlit app
 st.title("Classification and Visualisation App")
 
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
@@ -104,29 +98,21 @@ if uploaded_file:
         if not feature_columns:
             st.error("Please select at least one feature column.")
 
-        # Preprocessing data
-        scaler_option = st.selectbox(
-            "Select Scaler", ["Standard Scaler", "Min-Max Scaler"], 
-            help="Standard Scaler works well for most models, Min-Max Scaler is useful for distance-based models like KNN."
-        )
+        scaler_option = st.selectbox("Select Scaler", ["Standard Scaler", "Min-Max Scaler"])
 
         X_scaled, y_encoded, label_encoder = preprocess_data(df, target_column, feature_columns, scaler_option)
-
-        # Train-Test split
         X_train, X_test, y_train, y_test = split_data(X_scaled, y_encoded)
 
         # KNN Model
         if st.button("Train KNN Model"):
-            knn_metric = st.selectbox(
-                "Select KNN Metric", ["euclidean", "manhattan", "minkowski"],
-                help="Euclidean for continuous features, Manhattan for sparse data, Minkowski for general cases."
-            )
+            knn_metric = st.selectbox("Select KNN Metric", ["euclidean", "manhattan", "minkowski"])
             k_range = range(1, 21)
             fig_knn, best_k, best_score = plot_knn_accuracy_curve(X_train, y_train, knn_metric, k_range)
             st.pyplot(fig_knn)
-            save_plot(fig_knn, f"knn_accuracy_curve_{knn_metric}.jpg")
+            plot_path = save_plot(fig_knn, f"knn_accuracy_curve_{knn_metric}.jpg")
+            st.download_button(label="Download Plot", data=open(plot_path, 'rb'), file_name=f"knn_accuracy_curve_{knn_metric}.jpg", mime='image/jpeg')
 
-            st.write(f"Best value of n_neighbors: {best_k} with accuracy: {best_score * 100:.2f}%")
+            st.write(f"Best K: {best_k} with Accuracy: {best_score * 100:.2f}%")
             
             knn_model = KNeighborsClassifier(n_neighbors=best_k, metric=knn_metric)
             knn_model.fit(X_train, y_train)
@@ -134,27 +120,15 @@ if uploaded_file:
             knn_accuracy_test = accuracy_score(y_test, y_pred_knn)
             st.write(f"KNN Test Accuracy: {knn_accuracy_test * 100:.2f}%")
 
-            # Make new predictions
-            new_data = st.text_input("Enter new data point for KNN Prediction (comma separated values)")
+            new_data = st.text_input("Enter new data for KNN prediction (comma separated values)")
             if new_data:
-                new_data = np.array([list(map(float, new_data.split(',')))])
-                new_data_scaled = StandardScaler().fit(X_train).transform(new_data)
-                new_pred_knn = knn_model.predict(new_data_scaled)
+                new_data = np.array([list(map(float, new_data.split(',')))]).reshape(1, -1)
+                new_pred_knn = knn_model.predict(new_data)
                 st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
-
-                # Visualizing new data point on the KNN plot
-                fig_knn_with_new = fig_knn
-                ax_knn = fig_knn_with_new.gca()
-                ax_knn.scatter(new_data[0][0], new_data[0][1], c='red', label="New Prediction", marker='x')
-                ax_knn.legend()
-                st.pyplot(fig_knn_with_new)
 
         # SVM Model
         if st.button("Train SVM Model"):
-            kernel_type = st.selectbox(
-                "Select SVM Kernel Type", ["linear", "poly", "rbf"],
-                help="Linear is best for linearly separable data, Poly for non-linear, RBF for complex decision boundaries."
-            )
+            kernel_type = st.selectbox("Select SVM Kernel Type", ["linear", "poly", "rbf"])
 
             svm_model = SVC(kernel=kernel_type)
             svm_model.fit(X_train, y_train)
@@ -165,27 +139,17 @@ if uploaded_file:
             if X_train.shape[1] >= 3:
                 fig_svm_3d = plot_svm_3d(X_train, y_train, kernel_type, feature_columns)
                 st.pyplot(fig_svm_3d)
-                save_plot(fig_svm_3d, f"svm_decision_boundary_{kernel_type}_3d.jpg")
+                plot_path = save_plot(fig_svm_3d, f"svm_decision_boundary_{kernel_type}_3d.jpg")
+                st.download_button(label="Download 3D SVM Plot", data=open(plot_path, 'rb'), file_name=f"svm_decision_boundary_{kernel_type}_3d.jpg", mime='image/jpeg')
 
-                # Make new predictions
-                new_data_svm = st.text_input("Enter new data point for SVM Prediction (comma separated values)")
+                new_data_svm = st.text_input("Enter new data for SVM prediction (comma separated values)")
                 if new_data_svm:
-                    new_data_svm = np.array([list(map(float, new_data_svm.split(',')))])
+                    new_data_svm = np.array([list(map(float, new_data_svm.split(',')))]).reshape(1, -1)
                     new_pred_svm = svm_model.predict(new_data_svm)
                     st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
 
-                    # Visualizing new data point on the SVM 3D plot
-                    fig_svm_3d_with_new = fig_svm_3d
-                    ax_svm_3d = fig_svm_3d_with_new.gca()
-                    ax_svm_3d.scatter(new_data_svm[0][0], new_data_svm[0][1], new_data_svm[0][2], c='red', label="New Prediction", s=100)
-                    ax_svm_3d.legend()
-                    st.pyplot(fig_svm_3d_with_new)
-
         # Decision Tree Model
         if st.button("Train Decision Tree Model"):
-            # User selects DPI for decision tree plot
-            dpi_value = st.slider("Select DPI for Decision Tree Plot", min_value=100, max_value=300, value=200)
-            
             dt_model = DecisionTreeClassifier(random_state=42)
             dt_model.fit(X_train, y_train)
             y_pred_dt = dt_model.predict(X_test)
@@ -194,19 +158,11 @@ if uploaded_file:
 
             fig_dt, ax_dt = plt.subplots(figsize=(15, 10))
             plot_tree(dt_model, filled=True, feature_names=feature_columns, class_names=label_encoder.classes_, ax=ax_dt)
-            plt.title("Decision Tree Classifier", fontsize=20)
-            st.pyplot(fig_dt, dpi=dpi_value)
+            plt.title("Decision Tree Classifier")
+            st.pyplot(fig_dt)
 
-            # Make new predictions
-            new_data_dt = st.text_input("Enter new data point for Decision Tree Prediction (comma separated values)")
+            new_data_dt = st.text_input("Enter new data for Decision Tree prediction (comma separated values)")
             if new_data_dt:
-                new_data_dt = np.array([list(map(float, new_data_dt.split(',')))])
+                new_data_dt = np.array([list(map(float, new_data_dt.split(',')))]).reshape(1, -1)
                 new_pred_dt = dt_model.predict(new_data_dt)
                 st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
-
-                # Visualizing new data point on the Decision Tree plot
-                fig_dt_with_new = fig_dt
-                ax_dt = fig_dt_with_new.gca()
-                ax_dt.scatter(new_data_dt[0][0], new_data_dt[0][1], c='red', label="New Prediction", marker='x')
-                ax_dt.legend()
-                st.pyplot(fig_dt_with_new)
