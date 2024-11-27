@@ -8,102 +8,99 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 
-# Load data function
+# Initializing session state for models and data
+if "models" not in st.session_state:
+    st.session_state.models = {}
+if "X_train" not in st.session_state:
+    st.session_state.X_train, st.session_state.X_test = None, None
+    st.session_state.y_train, st.session_state.y_test = None, None
+    st.session_state.label_encoder = None
+
+# Loading the dataset
 def load_data(file):
-    """Load the dataset based on file type (CSV or Excel)."""
-    if file is not None:
+    # Loading CSV or Excel files
+    if file:
         if file.name.endswith(".csv"):
             return pd.read_csv(file)
         elif file.name.endswith(".xlsx"):
             return pd.read_excel(file)
     return None
 
-# Function to encode target labels
-def encode_labels(y):
-    """Encode target labels using LabelEncoder."""
-    label_encoder = LabelEncoder()
-    return label_encoder.fit_transform(y), label_encoder
-
-# Function to preprocess the data
+# Preprocessing the dataset
 def preprocess_data(df, target_column, feature_columns):
-    """Preprocess data by scaling features and encoding labels."""
+    # Splitting into features and target
     X = df[feature_columns]
     y = df[target_column]
-    y_encoded, label_encoder = encode_labels(y)
-    X_scaled = StandardScaler().fit_transform(X)  # Scaling the features
+    # Encoding target labels
+    label_encoder = LabelEncoder()
+    y_encoded = label_encoder.fit_transform(y)
+    # Scaling feature values
+    X_scaled = StandardScaler().fit_transform(X)
     return X_scaled, y_encoded, label_encoder
 
 # Streamlit App
-st.title("ML Classification App")
+st.title("Simplified ML Classification App")
 
-# Upload data
+# Uploading dataset
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
 
-# Initialize model variables
-models = {
-    "Logistic Regression": None,
-    "KNN": None,
-    "SVM": None,
-    "Decision Tree": None
-}
-model_fitted = {key: False for key in models}
-
 if uploaded_file:
-    # Load and display the dataset
+    # Loading and displaying dataset
     df = load_data(uploaded_file)
     if df is not None:
         st.write("Dataset loaded successfully!")
         st.write(df.head())
 
-        # Select target and feature columns
+        # Selecting target and feature columns
         target_column = st.selectbox("Select the target column", df.columns)
         feature_columns = st.multiselect("Select feature columns", df.columns[df.columns != target_column])
 
         if feature_columns:
-            # Preprocess the data
-            X_scaled, y_encoded, label_encoder = preprocess_data(df, target_column, feature_columns)
-            X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_encoded, test_size=0.2, random_state=42)
+            # Preprocessing the data
+            X, y, label_encoder = preprocess_data(df, target_column, feature_columns)
+            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-            # Train Models
-            for model_name in models.keys():
-                if st.button(f"Train {model_name} Model"):
-                    if model_name == "Logistic Regression":
-                        models["Logistic Regression"] = LogisticRegression(max_iter=1000)
-                        models["Logistic Regression"].fit(X_train, y_train)
-                    elif model_name == "KNN":
-                        models["KNN"] = KNeighborsClassifier()
-                        models["KNN"].fit(X_train, y_train)
-                    elif model_name == "SVM":
-                        models["SVM"] = SVC()
-                        models["SVM"].fit(X_train, y_train)
-                    elif model_name == "Decision Tree":
-                        models["Decision Tree"] = DecisionTreeClassifier(random_state=42)
-                        models["Decision Tree"].fit(X_train, y_train)
+            # Storing preprocessed data in session state
+            st.session_state.X_train, st.session_state.X_test = X_train, X_test
+            st.session_state.y_train, st.session_state.y_test = y_train, y_test
+            st.session_state.label_encoder = label_encoder
 
-                    # Mark model as fitted
-                    model_fitted[model_name] = True
+            # Training models
+            if st.button("Train All Models"):
+                # Training Logistic Regression
+                model_lr = LogisticRegression(max_iter=1000).fit(X_train, y_train)
+                st.session_state.models["Logistic Regression"] = model_lr
 
-                    # Evaluate model
-                    y_pred = models[model_name].predict(X_test)
-                    accuracy = accuracy_score(y_test, y_pred)
-                    st.write(f"{model_name} Test Accuracy: {accuracy * 100:.2f}%")
+                # Training KNN
+                model_knn = KNeighborsClassifier(n_neighbors=5).fit(X_train, y_train)
+                st.session_state.models["KNN"] = model_knn
 
-            # New data prediction
-            new_data = {}
-            for feature in feature_columns:
-                new_data[feature] = st.number_input(f"Enter value for {feature}", value=0.0)
+                # Training SVM
+                model_svm = SVC(kernel="linear").fit(X_train, y_train)
+                st.session_state.models["SVM"] = model_svm
 
-            # Predict with all models when the button is clicked
+                # Training Decision Tree
+                model_dt = DecisionTreeClassifier(random_state=42).fit(X_train, y_train)
+                st.session_state.models["Decision Tree"] = model_dt
+
+                st.success("All models trained successfully!")
+
+            # Predicting on new data
+            new_data = {feature: st.number_input(f"Enter value for {feature}", value=0.0) for feature in feature_columns}
+
             if st.button("Predict"):
-                if all(value != 0.0 for value in new_data.values()):  # Ensure all columns are filled
+                if all(value != 0.0 for value in new_data.values()):
+                    # Scaling new input data
                     new_data_values = pd.DataFrame([new_data])
                     new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
 
-                    for model_name, model in models.items():
-                        if model_fitted[model_name]:  # Only predict with trained models
-                            new_pred = model.predict(new_data_scaled)
-                            st.write(f"{model_name} Predicted class: {label_encoder.inverse_transform(new_pred)[0]}")
+                    # Making predictions with each trained model
+                    for model_name, model in st.session_state.models.items():
+                        if model:
+                            pred = model.predict(new_data_scaled)
+                            predicted_class = st.session_state.label_encoder.inverse_transform(pred)[0]
+                            st.write(f"{model_name} Prediction: {predicted_class}")
                         else:
-                            st.warning(f"{model_name} is not trained yet.")
+                            st.warning(f"{model_name} is not trained yet!")
                 else:
-                    st.warning("Please enter valid values for all features before predicting.")
+                    st.warning("Please fill all feature values for prediction.")
