@@ -92,26 +92,30 @@ if uploaded_file:
             for feature in feature_columns:
                 new_data[feature] = st.number_input(f"Enter value for {feature}", value=0.0)
 
-            if all(value != 0.0 for value in new_data.values()):  # Make sure data is entered for all columns
-                new_data_values = np.array(list(new_data.values())).reshape(1, -1)
-                new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
-                
-                # Logistic Regression Prediction
-                if model_lr:
-                    new_pred_lr = model_lr.predict(new_data_scaled)
-                    st.write(f"Logistic Regression Predicted class: {label_encoder.inverse_transform(new_pred_lr)[0]}")
-                
-                # KNN Prediction
-                if model_knn:
-                    new_pred_knn = model_knn.predict(new_data_scaled)
-                    st.write(f"KNN Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
-                
-                # SVM Prediction
-                if model_svm:
-                    new_pred_svm = model_svm.predict(new_data_scaled)
-                    st.write(f"SVM Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
-                
-                # Decision Tree Prediction
-                if model_dt:
-                    new_pred_dt = model_dt.predict(new_data_scaled)
-                    st.write(f"Decision Tree Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
+            # When user clicks "Predict" button
+            if st.button("Predict"):
+                if all(value != 0.0 for value in new_data.values()):  # Ensure all columns are filled
+                    new_data_values = np.array(list(new_data.values())).reshape(1, -1)
+                    new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
+                    
+                    # Logistic Regression Prediction
+                    if model_lr:
+                        new_pred_lr = model_lr.predict(new_data_scaled)
+                        st.write(f"Logistic Regression Predicted class: {label_encoder.inverse_transform(new_pred_lr)[0]}")
+                    
+                    # KNN Prediction
+                    if model_knn:
+                        new_pred_knn = model_knn.predict(new_data_scaled)
+                        st.write(f"KNN Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
+                    
+                    # SVM Prediction
+                    if model_svm:
+                        new_pred_svm = model_svm.predict(new_data_scaled)
+                        st.write(f"SVM Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
+                    
+                    # Decision Tree Prediction
+                    if model_dt:
+                        new_pred_dt = model_dt.predict(new_data_scaled)
+                        st.write(f"Decision Tree Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
+                else:
+                    st.warning("Please enter valid values for all features before predicting.")
