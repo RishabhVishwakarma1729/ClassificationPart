@@ -9,6 +9,16 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
 
+# Initializing session state
+if "models" not in st.session_state:
+    st.session_state.models = {}
+if "scaler" not in st.session_state:
+    st.session_state.scaler = None
+if "label_encoder" not in st.session_state:
+    st.session_state.label_encoder = None
+if "feature_columns" not in st.session_state:
+    st.session_state.feature_columns = None
+
 # Function to load data
 def load_data(file):
     if file.name.endswith(".csv"):
@@ -49,14 +59,12 @@ if uploaded_file:
             X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
             # Storing data in session state
-            st.session_state.X_train, st.session_state.X_test = X_train, X_test
-            st.session_state.y_train, st.session_state.y_test = y_train, y_test
             st.session_state.scaler = scaler
             st.session_state.label_encoder = label_encoder
+            st.session_state.feature_columns = feature_columns
             st.success("Data preprocessed successfully!")
 
             # Training models
-            models = {}
             st.write("### Train Models")
             if st.button("Train Logistic Regression"):
                 model_lr = LogisticRegression(max_iter=1000)
@@ -64,7 +72,7 @@ if uploaded_file:
                 y_pred = model_lr.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"Logistic Regression Accuracy: {accuracy * 100:.2f}%")
-                models["Logistic Regression"] = model_lr
+                st.session_state.models["Logistic Regression"] = model_lr
 
             if st.button("Train KNN"):
                 k = st.slider("Select K (number of neighbors)", 1, 20, 5)
@@ -73,7 +81,7 @@ if uploaded_file:
                 y_pred = model_knn.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"KNN Accuracy: {accuracy * 100:.2f}%")
-                models["KNN"] = model_knn
+                st.session_state.models["KNN"] = model_knn
 
             if st.button("Train SVM"):
                 kernel = st.selectbox("Select SVM kernel", ["linear", "poly", "rbf"], index=2)
@@ -82,7 +90,7 @@ if uploaded_file:
                 y_pred = model_svm.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"SVM Accuracy: {accuracy * 100:.2f}%")
-                models["SVM"] = model_svm
+                st.session_state.models["SVM"] = model_svm
 
             if st.button("Train Decision Tree"):
                 model_dt = DecisionTreeClassifier(random_state=42)
@@ -90,9 +98,7 @@ if uploaded_file:
                 y_pred = model_dt.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"Decision Tree Accuracy: {accuracy * 100:.2f}%")
-                models["Decision Tree"] = model_dt
-
-            st.session_state.models = models
+                st.session_state.models["Decision Tree"] = model_dt
 
             # Predicting new data
             st.write("### Predict with New Data")
@@ -104,7 +110,7 @@ if uploaded_file:
                 else:
                     # Validating input dimensions
                     if len(new_data) != len(feature_columns):
-                        st.error(f"Number of features must be {len(feature_columns)}.")
+                        st.error(f"Number of features must match the trained model: {len(feature_columns)}.")
                     else:
                         # Scaling input data
                         new_data_scaled = st.session_state.scaler.transform([list(new_data.values())])
@@ -114,3 +120,4 @@ if uploaded_file:
                             pred = model.predict(new_data_scaled)
                             predicted_class = st.session_state.label_encoder.inverse_transform(pred)[0]
                             st.write(f"{model_name} Prediction: {predicted_class}")
+
