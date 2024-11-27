@@ -33,7 +33,7 @@ def preprocess_data(df, target_column, feature_columns, scaler_option):
     scaler = StandardScaler() if scaler_option == "Standard Scaler" else MinMaxScaler()
     X_scaled = scaler.fit_transform(X)
     
-    return X_scaled, y_encoded, label_encoder
+    return X_scaled, y_encoded, label_encoder, scaler
 
 # Train-test split
 def split_data(X_scaled, y_encoded):
@@ -100,7 +100,7 @@ if uploaded_file:
 
         scaler_option = st.selectbox("Select Scaler", ["Standard Scaler", "Min-Max Scaler"])
 
-        X_scaled, y_encoded, label_encoder = preprocess_data(df, target_column, feature_columns, scaler_option)
+        X_scaled, y_encoded, label_encoder, scaler = preprocess_data(df, target_column, feature_columns, scaler_option)
         X_train, X_test, y_train, y_test = split_data(X_scaled, y_encoded)
 
         # KNN Model
@@ -122,9 +122,20 @@ if uploaded_file:
 
             new_data = st.text_input("Enter new data for KNN prediction (comma separated values)")
             if new_data:
-                new_data = np.array([list(map(float, new_data.split(',')))]).reshape(1, -1)
-                new_pred_knn = knn_model.predict(new_data)
-                st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
+                try:
+                    new_data = np.array([list(map(float, new_data.split(',')))]).reshape(1, -1)
+                    new_data_scaled = scaler.transform(new_data)  # Scale the new data using the same scaler
+                    new_pred_knn = knn_model.predict(new_data_scaled)
+                    st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
+
+                    # Visualizing new data point on the KNN plot
+                    fig_knn_with_new = fig_knn
+                    ax_knn = fig_knn_with_new.gca()
+                    ax_knn.scatter(new_data[0][0], new_data[0][1], c='red', label="New Prediction", marker='x')
+                    ax_knn.legend()
+                    st.pyplot(fig_knn_with_new)
+                except Exception as e:
+                    st.error(f"Error with new data prediction: {e}")
 
         # SVM Model
         if st.button("Train SVM Model"):
@@ -144,9 +155,20 @@ if uploaded_file:
 
                 new_data_svm = st.text_input("Enter new data for SVM prediction (comma separated values)")
                 if new_data_svm:
-                    new_data_svm = np.array([list(map(float, new_data_svm.split(',')))]).reshape(1, -1)
-                    new_pred_svm = svm_model.predict(new_data_svm)
-                    st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
+                    try:
+                        new_data_svm = np.array([list(map(float, new_data_svm.split(',')))]).reshape(1, -1)
+                        new_data_svm_scaled = scaler.transform(new_data_svm)  # Scale the new data using the same scaler
+                        new_pred_svm = svm_model.predict(new_data_svm_scaled)
+                        st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
+
+                        # Visualizing new data point on the SVM 3D plot
+                        fig_svm_3d_with_new = fig_svm_3d
+                        ax_svm_3d = fig_svm_3d_with_new.gca()
+                        ax_svm_3d.scatter(new_data_svm[0][0], new_data_svm[0][1], new_data_svm[0][2], c='red', label="New Prediction", s=100)
+                        ax_svm_3d.legend()
+                        st.pyplot(fig_svm_3d_with_new)
+                    except Exception as e:
+                        st.error(f"Error with new data prediction: {e}")
 
         # Decision Tree Model
         if st.button("Train Decision Tree Model"):
@@ -163,6 +185,10 @@ if uploaded_file:
 
             new_data_dt = st.text_input("Enter new data for Decision Tree prediction (comma separated values)")
             if new_data_dt:
-                new_data_dt = np.array([list(map(float, new_data_dt.split(',')))]).reshape(1, -1)
-                new_pred_dt = dt_model.predict(new_data_dt)
-                st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
+                try:
+                    new_data_dt = np.array([list(map(float, new_data_dt.split(',')))]).reshape(1, -1)
+                    new_data_dt_scaled = scaler.transform(new_data_dt)  # Scale the new data using the same scaler
+                    new_pred_dt = dt_model.predict(new_data_dt_scaled)
+                    st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
+                except Exception as e:
+                    st.error(f"Error with new data prediction: {e}")
