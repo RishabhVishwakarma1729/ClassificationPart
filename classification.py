@@ -21,7 +21,7 @@ def save_plot(fig, filename):
     st.download_button(label="Download Plot", data=open(plot_path, 'rb'), file_name=filename, mime='image/jpeg')  # Allowing the user to download the plot
 
 # File upload functionality
-st.title("ML Classification App with Custom Dataset")
+st.title("Classification Modelling and Visualisation App")
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
 
 if uploaded_file is not None:
