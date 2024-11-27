@@ -100,22 +100,22 @@ if uploaded_file:
                 if all(value != 0.0 for value in new_data.values()):  # Ensure all columns are filled
                     new_data_values = np.array(list(new_data.values())).reshape(1, -1)
                     new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
-                    
+
                     # Logistic Regression Prediction
                     if model_lr is not None:
                         new_pred_lr = model_lr.predict(new_data_scaled)
                         st.write(f"Logistic Regression Predicted class: {label_encoder.inverse_transform(new_pred_lr)[0]}")
-                    
+
                     # KNN Prediction
                     if model_knn is not None:
                         new_pred_knn = model_knn.predict(new_data_scaled)
                         st.write(f"KNN Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
-                    
+
                     # SVM Prediction
                     if model_svm is not None:
                         new_pred_svm = model_svm.predict(new_data_scaled)
                         st.write(f"SVM Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
-                    
+
                     # Decision Tree Prediction
                     if model_dt is not None:
                         new_pred_dt = model_dt.predict(new_data_scaled)
