@@ -135,6 +135,21 @@ if uploaded_file:
             knn_accuracy_test = accuracy_score(y_test, y_pred_knn)
             st.write(f"KNN Test Accuracy: {knn_accuracy_test * 100:.2f}%")
 
+            # Make new predictions
+            new_data = st.text_input("Enter new data point for KNN Prediction (comma separated values)")
+            if new_data:
+                new_data = np.array([list(map(float, new_data.split(',')))])
+                new_data_scaled = StandardScaler().fit(X_train).transform(new_data)
+                new_pred_knn = knn_model.predict(new_data_scaled)
+                st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
+
+                # Visualizing new data point on the KNN plot
+                fig_knn_with_new = fig_knn
+                ax_knn = fig_knn_with_new.gca()
+                ax_knn.scatter(new_data[0][0], new_data[0][1], c='red', label="New Prediction", marker='x')
+                ax_knn.legend()
+                st.pyplot(fig_knn_with_new)
+
         # SVM Model
         if st.button("Train SVM Model"):
             kernel_type = st.selectbox(
@@ -152,20 +167,26 @@ if uploaded_file:
                 fig_svm_3d = plot_svm_3d(X_train, y_train, kernel_type, feature_columns)
                 st.pyplot(fig_svm_3d)
                 save_plot(fig_svm_3d, f"svm_decision_boundary_{kernel_type}_3d.jpg")
-            else:
-                st.write("Data doesn't have enough features (at least 3) for 3D visualization.")
+
+                # Make new predictions
+                new_data_svm = st.text_input("Enter new data point for SVM Prediction (comma separated values)")
+                if new_data_svm:
+                    new_data_svm = np.array([list(map(float, new_data_svm.split(',')))])
+                    new_pred_svm = svm_model.predict(new_data_svm)
+                    st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
+
+                    # Visualizing new data point on the SVM 3D plot
+                    fig_svm_3d_with_new = fig_svm_3d
+                    ax_svm_3d = fig_svm_3d_with_new.gca()
+                    ax_svm_3d.scatter(new_data_svm[0][0], new_data_svm[0][1], new_data_svm[0][2], c='red', label="New Prediction", s=100)
+                    ax_svm_3d.legend()
+                    st.pyplot(fig_svm_3d_with_new)
 
         # Decision Tree Model
         if st.button("Train Decision Tree Model"):
+            # User selects DPI for decision tree plot
+            dpi_value = st.slider("Select DPI for Decision Tree Plot", min_value=100, max_value=300, value=200)
+            
             dt_model = DecisionTreeClassifier(random_state=42)
             dt_model.fit(X_train, y_train)
-            y_pred_dt = dt_model.predict(X_test)
-            dt_accuracy = accuracy_score(y_test, y_pred_dt)
-            st.write(f"Decision Tree Test Accuracy: {dt_accuracy * 100:.2f}%")
-
-            fig_dt, ax_dt = plt.subplots(figsize=(12, 8))
-            from sklearn.tree import plot_tree
-            plot_tree(dt_model, feature_names=feature_columns, class_names=label_encoder.classes_, filled=True, ax=ax_dt)
-            plt.title("Decision Tree Visualization")
-            st.pyplot(fig_dt)
-            save_plot(fig_dt, "decision_tree_visualization.jpg")
+            y_pred_dt =
