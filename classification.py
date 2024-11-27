@@ -87,11 +87,14 @@ if uploaded_file:
                 accuracy_dt = accuracy_score(y_test, y_pred_dt)
                 st.write(f"Decision Tree Test Accuracy: {accuracy_dt * 100:.2f}%")
 
-            # New data prediction
-            new_data = st.text_input("Enter new data point for prediction (comma-separated values)")
-            if new_data:
-                new_data = np.array([list(map(float, new_data.split(',')))])
-                new_data_scaled = StandardScaler().fit(X_train).transform(new_data)
+            # New data prediction (column-wise input)
+            new_data = {}
+            for feature in feature_columns:
+                new_data[feature] = st.number_input(f"Enter value for {feature}", value=0.0)
+
+            if all(value != 0.0 for value in new_data.values()):  # Make sure data is entered for all columns
+                new_data_values = np.array(list(new_data.values())).reshape(1, -1)
+                new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
                 
                 # Logistic Regression Prediction
                 if model_lr:
@@ -112,4 +115,3 @@ if uploaded_file:
                 if model_dt:
                     new_pred_dt = model_dt.predict(new_data_scaled)
                     st.write(f"Decision Tree Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
-
