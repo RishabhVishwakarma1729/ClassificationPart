@@ -37,6 +37,12 @@ def preprocess_data(df, target_column, feature_columns):
     y = df[target_column]
     label_encoder = LabelEncoder()
     y_encoded = label_encoder.fit_transform(y)
+    
+    # Display the label encoding mapping
+    st.write("### Label Encoding Mapping:")
+    label_mapping = dict(zip(label_encoder.classes_, label_encoder.transform(label_encoder.classes_)))
+    st.write(label_mapping)
+    
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
     return X_scaled, y_encoded, scaler, label_encoder
