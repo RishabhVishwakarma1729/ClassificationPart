@@ -64,8 +64,10 @@ if uploaded_file:
             st.session_state.feature_columns = feature_columns
             st.success("Data preprocessed successfully!")
 
-            # Training models
+            # Training models with default parameters (no user inputs)
             st.write("### Train Models")
+            
+            # Logistic Regression
             if st.button("Train Logistic Regression"):
                 model_lr = LogisticRegression(max_iter=1000)
                 model_lr.fit(X_train, y_train)
@@ -74,26 +76,27 @@ if uploaded_file:
                 st.write(f"Logistic Regression Accuracy: {accuracy * 100:.2f}%")
                 st.session_state.models["Logistic Regression"] = model_lr
 
+            # KNN
             if st.button("Train KNN"):
-                k = st.slider("Select K (number of neighbors)", 1, 20, 5)
-                model_knn = KNeighborsClassifier(n_neighbors=k)
+                model_knn = KNeighborsClassifier()  # Using default K=5
                 model_knn.fit(X_train, y_train)
                 y_pred = model_knn.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"KNN Accuracy: {accuracy * 100:.2f}%")
                 st.session_state.models["KNN"] = model_knn
 
+            # SVM
             if st.button("Train SVM"):
-                kernel = st.selectbox("Select SVM kernel", ["linear", "poly", "rbf"], index=2)
-                model_svm = SVC(kernel=kernel)
+                model_svm = SVC()  # Using default 'rbf' kernel
                 model_svm.fit(X_train, y_train)
                 y_pred = model_svm.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred)
                 st.write(f"SVM Accuracy: {accuracy * 100:.2f}%")
                 st.session_state.models["SVM"] = model_svm
 
+            # Decision Tree
             if st.button("Train Decision Tree"):
-                model_dt = DecisionTreeClassifier(random_state=42)
+                model_dt = DecisionTreeClassifier(random_state=42)  # Using default parameters
                 model_dt.fit(X_train, y_train)
                 y_pred = model_dt.predict(X_test)
                 accuracy = accuracy_score(y_test, y_pred)
@@ -120,4 +123,3 @@ if uploaded_file:
                             pred = model.predict(new_data_scaled)
                             predicted_class = st.session_state.label_encoder.inverse_transform(pred)[0]
                             st.write(f"{model_name} Prediction: {predicted_class}")
-
