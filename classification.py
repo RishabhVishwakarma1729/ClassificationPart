@@ -49,8 +49,17 @@ st.title("ML Classification App")
 # Upload data
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
 
-# Initialize models as None
-model_lr = model_knn = model_svm = model_dt = None
+# Initialize models and state for session
+if 'models' not in st.session_state:
+    st.session_state.models = {
+        "Logistic Regression": None,
+        "KNN": None,
+        "SVM": None,
+        "Decision Tree": None
+    }
+
+if 'trained' not in st.session_state:
+    st.session_state.trained = False
 
 if uploaded_file:
     # Load and display the dataset
@@ -86,31 +95,26 @@ if uploaded_file:
                         model.set_params(kernel=kernel_type)
 
                     # Train and evaluate model
-                    model = train_model(model, X_train, y_train, X_test, y_test, model_name)
+                    trained_model = train_model(model, X_train, y_train, X_test, y_test, model_name)
+                    st.session_state.models[model_name] = trained_model  # Save model in session state
+                    st.session_state.trained = True  # Mark models as trained
 
             # New data prediction (column-wise input)
-            new_data = {}
-            for feature in feature_columns:
-                new_data[feature] = st.number_input(f"Enter value for {feature}", value=0.0)
+            if st.session_state.trained:
+                new_data = {}
+                for feature in feature_columns:
+                    new_data[feature] = st.number_input(f"Enter value for {feature}", value=0.0)
 
-            # Predict with all models when the button is clicked
-            if st.button("Predict"):
-                if all(value != 0.0 for value in new_data.values()):  # Ensure all columns are filled
-                    new_data_values = np.array(list(new_data.values())).reshape(1, -1)
-                    new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
+                # Predict with all models when the button is clicked
+                if st.button("Predict"):
+                    if all(value != 0.0 for value in new_data.values()):  # Ensure all columns are filled
+                        new_data_values = np.array(list(new_data.values())).reshape(1, -1)
+                        new_data_scaled = StandardScaler().fit(X_train).transform(new_data_values)
 
-                    # Prediction with all models, only if they have been trained
-                    if model_lr is not None:
-                        new_pred_lr = model_lr.predict(new_data_scaled)
-                        st.write(f"Logistic Regression Predicted class: {label_encoder.inverse_transform(new_pred_lr)[0]}")
-                    if model_knn is not None:
-                        new_pred_knn = model_knn.predict(new_data_scaled)
-                        st.write(f"KNN Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
-                    if model_svm is not None:
-                        new_pred_svm = model_svm.predict(new_data_scaled)
-                        st.write(f"SVM Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
-                    if model_dt is not None:
-                        new_pred_dt = model_dt.predict(new_data_scaled)
-                        st.write(f"Decision Tree Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
-                else:
-                    st.warning("Please enter valid values for all features before predicting.")
+                        # Prediction with all models, only if they have been trained
+                        for model_name, model in st.session_state.models.items():
+                            if model is not None:
+                                new_pred = model.predict(new_data_scaled)
+                                st.write(f"{model_name} Predicted class: {label_encoder.inverse_transform(new_pred)[0]}")
+                    else:
+                        st.warning("Please enter valid values for all features before predicting.")
