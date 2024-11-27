@@ -87,7 +87,7 @@ def plot_svm_3d(X_train, y_train, kernel_type, feature_columns):
     return fig_svm_3d
 
 # Main App
-st.title("ML Classification App with Custom Dataset")
+st.title("Classification and Visualisation App")
 
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
 
