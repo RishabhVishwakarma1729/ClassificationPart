@@ -1,11 +1,22 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler, LabelEncoder
+from sklearn.linear_model import LogisticRegression
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.svm import SVC
+from sklearn.tree import DecisionTreeClassifier
 from sklearn.metrics import accuracy_score
+
+# Load data function
+def load_data(file):
+    if file is not None:
+        if file.name.endswith(".csv"):
+            return pd.read_csv(file)
+        elif file.name.endswith(".xlsx"):
+            return pd.read_excel(file)
+    return None
 
 # Function to encode target labels
 def encode_labels(y):
@@ -13,79 +24,92 @@ def encode_labels(y):
     return label_encoder.fit_transform(y), label_encoder
 
 # Function to preprocess the data
-def preprocess_data(df, target_column, feature_columns, scaler_option):
+def preprocess_data(df, target_column, feature_columns):
     X = df[feature_columns]
     y = df[target_column]
     y_encoded, label_encoder = encode_labels(y)
-    
-    scaler = StandardScaler() if scaler_option == "Standard Scaler" else None
-    if scaler:
-        X_scaled = scaler.fit_transform(X)
-    else:
-        X_scaled = X
-    
-    return X_scaled, y_encoded, label_encoder, scaler
+    X_scaled = StandardScaler().fit_transform(X)  # Scaling the features
+    return X_scaled, y_encoded, label_encoder
 
-# Function to plot Logistic Regression decision boundary using np.linspace
-def plot_logistic_regression(X_train, y_train, model, feature_columns, scaler=None):
-    # Generate a range of values using np.linspace for the decision boundary
-    x1_min, x1_max = X_train[:, 0].min(), X_train[:, 0].max()
-    x2_min, x2_max = X_train[:, 1].min(), X_train[:, 1].max()
-    
-    x1_values = np.linspace(x1_min, x1_max, 100)
-    x2_values = np.linspace(x2_min, x2_max, 100)
-    
-    # Create the decision boundary by predicting for each combination of x1 and x2 values
-    xx, yy = np.meshgrid(x1_values, x2_values)
-    grid_points = np.c_[xx.ravel(), yy.ravel()]
-    predictions = model.predict(grid_points).reshape(xx.shape)
-    
-    plt.figure(figsize=(10, 6))
-    plt.contourf(xx, yy, predictions, alpha=0.3, cmap=plt.cm.RdBu)
-    plt.scatter(X_train[:, 0], X_train[:, 1], c=y_train, cmap=plt.cm.RdBu, edgecolors='k', marker='o')
-    plt.xlabel(feature_columns[0])
-    plt.ylabel(feature_columns[1])
-    plt.title("Logistic Regression Decision Boundary")
-    return plt
+# Streamlit App
+st.title("ML Classification App")
 
-# Streamlit app
-st.title("Logistic Regression with Multiple Features")
-
+# Upload data
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
 
 if uploaded_file:
-    df = pd.read_csv(uploaded_file) if uploaded_file.name.endswith(".csv") else pd.read_excel(uploaded_file)
-    st.write("Dataset loaded successfully!")
-    st.write(df.head())
+    # Load and display the dataset
+    df = load_data(uploaded_file)
+    if df is not None:
+        st.write("Dataset loaded successfully!")
+        st.write(df.head())
 
-    # Select target and feature columns
-    target_column = st.selectbox("Select the target column", df.columns)
-    feature_columns = st.multiselect("Select feature columns", df.columns[df.columns != target_column])
+        # Select target and feature columns
+        target_column = st.selectbox("Select the target column", df.columns)
+        feature_columns = st.multiselect("Select feature columns", df.columns[df.columns != target_column])
 
-    scaler_option = st.selectbox("Select Scaler", ["Standard Scaler", "None"])
+        if feature_columns:
+            # Preprocess the data
+            X_scaled, y_encoded, label_encoder = preprocess_data(df, target_column, feature_columns)
+            X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_encoded, test_size=0.2, random_state=42)
 
-    # Preprocess the data
-    X_scaled, y_encoded, label_encoder, scaler = preprocess_data(df, target_column, feature_columns, scaler_option)
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y_encoded, test_size=0.2, random_state=42)
+            # Train Logistic Regression
+            if st.button("Train Logistic Regression Model"):
+                model_lr = LogisticRegression(max_iter=1000)
+                model_lr.fit(X_train, y_train)
+                y_pred_lr = model_lr.predict(X_test)
+                accuracy_lr = accuracy_score(y_test, y_pred_lr)
+                st.write(f"Logistic Regression Test Accuracy: {accuracy_lr * 100:.2f}%")
 
-    # Logistic Regression Model
-    model = LogisticRegression()
-    model.fit(X_train, y_train)
-    
-    # Plotting the decision boundary
-    fig = plot_logistic_regression(X_train, y_train, model, feature_columns, scaler)
-    st.pyplot(fig)
-    
-    # Show model accuracy
-    y_pred = model.predict(X_test)
-    accuracy = accuracy_score(y_test, y_pred)
-    st.write(f"Test Accuracy: {accuracy * 100:.2f}%")
-    
-    # New data prediction input
-    new_data = st.text_input("Enter new data point for prediction (comma-separated values)")
-    if new_data:
-        new_data = np.array([list(map(float, new_data.split(',')))])
-        if scaler:
-            new_data = scaler.transform(new_data)
-        new_pred = model.predict(new_data)
-        st.write(f"Predicted class: {label_encoder.inverse_transform(new_pred)[0]}")
+            # Train KNN Model
+            if st.button("Train KNN Model"):
+                k_value = st.slider("Select number of neighbors for KNN", min_value=1, max_value=20, value=5)
+                model_knn = KNeighborsClassifier(n_neighbors=k_value)
+                model_knn.fit(X_train, y_train)
+                y_pred_knn = model_knn.predict(X_test)
+                accuracy_knn = accuracy_score(y_test, y_pred_knn)
+                st.write(f"KNN Test Accuracy: {accuracy_knn * 100:.2f}%")
+
+            # Train SVM Model
+            if st.button("Train SVM Model"):
+                kernel_type = st.selectbox("Select SVM Kernel Type", ["linear", "poly", "rbf"])
+                model_svm = SVC(kernel=kernel_type)
+                model_svm.fit(X_train, y_train)
+                y_pred_svm = model_svm.predict(X_test)
+                accuracy_svm = accuracy_score(y_test, y_pred_svm)
+                st.write(f"SVM Test Accuracy: {accuracy_svm * 100:.2f}%")
+
+            # Train Decision Tree Model
+            if st.button("Train Decision Tree Model"):
+                model_dt = DecisionTreeClassifier(random_state=42)
+                model_dt.fit(X_train, y_train)
+                y_pred_dt = model_dt.predict(X_test)
+                accuracy_dt = accuracy_score(y_test, y_pred_dt)
+                st.write(f"Decision Tree Test Accuracy: {accuracy_dt * 100:.2f}%")
+
+            # New data prediction
+            new_data = st.text_input("Enter new data point for prediction (comma-separated values)")
+            if new_data:
+                new_data = np.array([list(map(float, new_data.split(',')))])
+                new_data_scaled = StandardScaler().fit(X_train).transform(new_data)
+                
+                # Logistic Regression Prediction
+                if model_lr:
+                    new_pred_lr = model_lr.predict(new_data_scaled)
+                    st.write(f"Logistic Regression Predicted class: {label_encoder.inverse_transform(new_pred_lr)[0]}")
+                
+                # KNN Prediction
+                if model_knn:
+                    new_pred_knn = model_knn.predict(new_data_scaled)
+                    st.write(f"KNN Predicted class: {label_encoder.inverse_transform(new_pred_knn)[0]}")
+                
+                # SVM Prediction
+                if model_svm:
+                    new_pred_svm = model_svm.predict(new_data_scaled)
+                    st.write(f"SVM Predicted class: {label_encoder.inverse_transform(new_pred_svm)[0]}")
+                
+                # Decision Tree Prediction
+                if model_dt:
+                    new_pred_dt = model_dt.predict(new_data_scaled)
+                    st.write(f"Decision Tree Predicted class: {label_encoder.inverse_transform(new_pred_dt)[0]}")
+
