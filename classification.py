@@ -39,7 +39,7 @@ def preprocess_data(df, target_column, feature_columns):
     return X_scaled, y_encoded, label_encoder
 
 # Streamlit App
-st.title("Simplified ML Classification App")
+st.title("ML Classification App")
 
 # Uploading dataset
 uploaded_file = st.file_uploader("Upload your dataset (CSV or Excel format)", type=["csv", "xlsx"])
